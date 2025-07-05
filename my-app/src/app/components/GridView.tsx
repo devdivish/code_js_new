@@ -42,9 +42,9 @@ const GridView: React.FC<GridViewProps> = ({ documents }) => {
           </thead>
           <tbody className="text-gray-600 text-sm font-light">
             {currentDocs.map((doc) => (
-              <tr key={doc.ProphecyId} className="border-b border-gray-200 hover:bg-gray-100 cursor-pointer" onClick={() => setSelectedDocument(doc)}>
+              <tr key={doc.PropId} className="border-b border-gray-200 hover:bg-gray-100 cursor-pointer" onClick={() => setSelectedDocument(doc)}>
                 <td className="py-3 px-6 text-left whitespace-nowrap">
-                  <input type="checkbox" checked={selectedDocument?.ProphecyId === doc.ProphecyId} readOnly />
+                  <input type="checkbox" checked={selectedDocument?.PropId === doc.PropId} readOnly />
                 </td>
                 {columns.map(col => (
                   <td key={col} className="py-3 px-6 text-left">

@@ -1,6 +1,6 @@
 
 // src/components/FiltersSidebar.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 // Assuming these constants are defined elsewhere and imported
 // import { DOCTYPES_MAP, BRANCHES_MAP, SEARCH_TYPES } from './constants';
@@ -74,6 +74,15 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
   isLoading
   
 }) => {
+
+  const [localFromDate, setLocalFromDate] = useState(fromDate);
+  const [localToDate, setLocalToDate] = useState(toDate);
+
+  useEffect(() => {
+    setLocalFromDate(fromDate);
+    setLocalToDate(toDate);
+  }, [fromDate, toDate]);
+
 
   const [showAllDocTypes, setShowAllDocTypes] = useState(false);
   const [showAllBranchTypes, setShowAllBranchTypes] = useState(false);
@@ -154,10 +163,29 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
       return availableExtensionTypes.reduce((sum, type) => sum + type.count, 0);
     }, [availableExtensionTypes]);
 
+    const handleApplyDateFilter = () => {
+        if (localFromDate && !localToDate) {
+          alert('Please select an end date.');
+          return;
+        }
+        if (!localFromDate && localToDate) {
+          alert('Please select a start date.');
+          return;
+        }
+        if (localFromDate && localToDate && new Date(localFromDate) > new Date(localToDate)) {
+            alert('The "From" date cannot be after the "To" date.');
+            return;
+        }
+        setFromDate(localFromDate);
+        setToDate(localToDate);
+      };
+
  // *** NEW *** Handler for clearing just the date range
  const handleClearDateRange = () => {
-  setFromDate('');
-  setToDate('');
+    setLocalFromDate('');
+    setLocalToDate('');
+    setFromDate('');
+    setToDate('');
   // Optionally, if year filter should also be enabled when dates are cleared:
   // setYearFilter(''); // Or set to a default if you have one
 };
@@ -258,22 +286,29 @@ const isAnyFilterActive = useMemo(() => {
           <label className="text-sm">From:</label>
           <input
             type="date"
-            value={fromDate}
-            onChange={(e) => { setFromDate(e.target.value); setYearFilter(""); }} // Clear year
+            value={localFromDate}
+            onChange={(e) => { setLocalFromDate(e.target.value); setYearFilter(""); }} // Clear year
             className="border rounded-md p-2 w-full"
           />
           <label className="text-sm">To:</label>
           <input
             type="date"
-            value={toDate}
-            onChange={(e) => { setToDate(e.target.value); setYearFilter(""); }} // Clear year
+            value={localToDate}
+            onChange={(e) => { setLocalToDate(e.target.value); setYearFilter(""); }} // Clear year
             className="border rounded-md p-2 w-full"
           />
         </div>
+        <button
+          onClick={handleApplyDateFilter}
+          className="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+          disabled={isLoading || (fromDate === localFromDate && toDate === localToDate)}
+        >
+          Apply Date Filter
+        </button>
         {yearFilter && <p className="text-xs text-gray-500 mt-1">Year filter is active.</p>}
       
       {/* *** NEW *** Clear Date Range Button */}
-      {(fromDate || toDate) && (
+      {(localFromDate || localToDate) && (
             <button
               onClick={handleClearDateRange}
               className="text-sm text-blue-600 hover:text-blue-800 mt-2 focus:outline-none"

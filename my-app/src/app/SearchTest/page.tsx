@@ -42,8 +42,8 @@ const DocumentList = () => {
   const rawQueryFromUrl = searchParams.get("q") || ""; // Query as a JSON string or simple string
 
   
-  const docIdFromUrl=searchParams.get("ProphId") 
-  const parentIdFromUrl=searchParams.get("ParentPropId") || ""
+  const docIdFromUrl=searchParams.get("PropId");
+  const parentIdFromUrl=searchParams.get("ParentPropId") || "";
   const IsAttachmentFromUrl=searchParams.get("isAttachment")==="true" ;   // the case has to be handled where this might be string
 
   
@@ -141,9 +141,9 @@ const DocumentList = () => {
   const fetchDocuments = useCallback(async (isLoadMore = false,attachmentQuery?: {PropId: string,ParentPropId: string, isAttachment: boolean}) => {
     // ... (previous checks for searchQuery remain the same) ...
 
-    if (fromDate && !toDate) {                             // ⬅️ ADDED
-      alert('Please select an end date before searching'); // ⬅️ ADDED
-      return;                                              // ⬅️ ADDED
+    if ((fromDate && !toDate) || (!fromDate && toDate)) {
+        setError("Please provide a complete date range (both start and end dates).");
+        return;
     }
 
     setLoading(true);
@@ -314,11 +314,11 @@ const DocumentList = () => {
 
 
   const handleAttachmentLinkClick = useCallback(async (clickedDoc: Document) => {
-    const PropId=clickedDoc.PropId || ""
-    const is_attachment=clickedDoc.IsAttachment === true || String(clickedDoc.IsAttachment).toLowerCase() === "true";
-    const ParentPropId=clickedDoc.ParentPropId || ""
+    const PropId = clickedDoc.PropId || ""
+    const is_attachment = clickedDoc.IsAttachment === true || String(clickedDoc.IsAttachment).toLowerCase() === "true";
+    const parentPropId = clickedDoc.ParentPropId || ""
     
-    const newUrl=`${window.location.origin}${window.location.pathname}?PropId=${encodeURIComponent(PropId)}&ParentPropId=${encodeURIComponent(ParentPropId)}&isAttachment=${encodeURIComponent(is_attachment)}`
+    const newUrl = `${window.location.origin}${window.location.pathname}?PropId=${encodeURIComponent(PropId)}&ParentPropId=${encodeURIComponent(parentPropId)}&isAttachment=${encodeURIComponent(is_attachment)}`
     console.log(newUrl)
   
   window.open(newUrl,'_blank');
