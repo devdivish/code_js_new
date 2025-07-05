@@ -7,7 +7,9 @@ import DateFormatter from './../components/DateFormatter'; // adjust path as nee
 import FiltersSidebar from "../components/FiltersSidebar";
 import SearchResultsArea from "../components/SearchResultsArea";
 import Header from "../components/Header";
+import GridView from "../components/GridView";
 
+import GridView1 from "../components/GridView1";
 
 // --- Configuration ---
 import { FaList, FaTh } from 'react-icons/fa';
@@ -19,19 +21,6 @@ import {API_BASE_URL, PAGE_SIZE, DOCTYPES_MAP, ES_DOCTYPE_FIELD, BRANCHES_MAP, E
 
 // --- Interface
 import { Document, BackendResponse } from '../types'; // Assuming types are in ../types.ts
-
-const GridView = ({ documents }: { documents: Document[] }) => {
-    return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {documents.map((doc, index) => (
-                <div key={index} className="border p-4 rounded">
-                    <h3>{doc.FileName}</h3>
-                    <p>Date: {doc.DocumentDate ? <DateFormatter dateString={doc.DocumentDate} /> : "N/A"}</p>
-                </div>
-            ))}
-        </div>
-    );
-};
 
 // --- Component ---
 const DocumentList = () => {
@@ -56,6 +45,7 @@ const DocumentList = () => {
   const [searchAfter, setSearchAfter] = useState<any[] | null>(null); // For pagination
   const [currentViewTitle, setCurrentViewTitle] = useState<string | null>(null);
   const [view, setView] = useState('reader'); // Add this line
+  const [gridPageSize, setGridPageSize] = useState(100);
 
 
   // Filter State
@@ -206,7 +196,7 @@ const DocumentList = () => {
     // Include properties conditionally to avoid undefined where possible
     const payload: PayloadToSend = {
       queries: parsedApiQueries,
-      size: PAGE_SIZE,
+      size: view === 'grid' ? gridPageSize : PAGE_SIZE,
       search_type: searchType,
       stream: false, // Explicitly false
       ...(Object.keys(activeFilters).length > 0 && { filters: activeFilters }), // Add filters only if they exist
@@ -301,7 +291,7 @@ const DocumentList = () => {
     }
   }, [
       // ... (dependencies remain the same) ...
-      parsedApiQueries, searchAfter, yearFilter, selectedDocTypeValues, selectedBranchTypeValues,selectedExtensionTypeValues, searchType, fromDate, toDate,documents,adaptDocs
+      parsedApiQueries, searchAfter, yearFilter, selectedDocTypeValues, selectedBranchTypeValues,selectedExtensionTypeValues, searchType, fromDate, toDate,documents,adaptDocs, view, gridPageSize
     ]
   );
 
@@ -372,7 +362,9 @@ const DocumentList = () => {
       searchType,
       fromDate,
       toDate,
-      docIdFromUrl
+      docIdFromUrl,
+      gridPageSize,
+      view
   ]);
 
 
@@ -439,7 +431,7 @@ const handleExtensionTypeChange = useCallback((extensionTypeValue: string) => {
   
   // --- Render ---
   return (
-    <div>
+    <div className="bg-white text-black">
       <Header />
       <div className="flex">
         {view === 'reader' && (
@@ -485,7 +477,12 @@ const handleExtensionTypeChange = useCallback((extensionTypeValue: string) => {
               currentViewTitle={currentViewTitle} // Pass context title
             />
           ) : (
-            <GridView documents={documents} />
+            <GridView1 
+              documents={documents} 
+              pageSize={gridPageSize} 
+              onPageSizeChange={setGridPageSize} 
+              isLoading={loading} 
+            />
           )}
         </div>
       </div>

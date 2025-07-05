@@ -3,7 +3,7 @@ import React from 'react';
 import { FaPaperclip } from 'react-icons/fa';
 // Import related components and types
 import DateFormatter from './DateFormatter';
-import { DocumentButton } from './DocumentButton'; // Assuming path
+
 import { Document } from '../types'; // Assuming Document type is in ../types.ts
 import DocumentActions from './DocumentActions';
 
