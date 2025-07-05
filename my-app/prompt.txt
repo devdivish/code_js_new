@@ -1,0 +1,21 @@
+the current appliction which is rendering documents on the basis of search query needs a ui enhancement and better looking. 
+right now the page which is rendered @src/app/SearchTest/page.tsx when you enter your keywords shows documents metadata in cards form and there is a left sidebar for applying filters dynamically
+the rendered page must have 2 views the one which i mentioned above would be the reader view and the other one which is grid view
+when user clicks grid view the user when he clicks on grid view shows metadata of say 100 documents at once in a grid structure populating fields against row of documents
+make a checkbox for selecting one or multiple documents 
+when a checkbox is clicked it should open the document's metadata in side section or in pop up  mentioning its metadata ( populating fields against the values returned from es).... when user clicks on some other document the metadata of that document should be shown
+these are the major fields in my es index
+propId
+ParentpropId
+IsAttachment
+SystemPath
+Branch
+DocType
+Text
+AttachmentPath
+DocumentDate
+DocumentFrom
+DocumentTo
+there are also more fields and in grid view you have to take all fields as column titles
+also pagination mentioned 100 docs of say 21000 docs returns , going to next page option
+i want you to change the header( which doesnt look good) and also other things to make the website look good visibly and clean 
