@@ -23,8 +23,13 @@ export default function HomePage() {
         }
 
         const phraseMatches = query.matchAll(/"([^"]*)"/g);
-        const extractedPhrases = Array.from(phraseMatches, match => match[1])
+        let extractedPhrases = Array.from(phraseMatches, match => match[1])
                                      .filter(phrase => phrase.trim() !== "");
+
+            // ⬅ ADDED: if no quoted phrases but user typed something, treat whole query as one phrase
+        if (extractedPhrases.length === 0 && query.trim() !== "") {
+            extractedPhrases = [query.trim()];
+        }
 
         if (extractedPhrases.length === 0) {
              console.log('No valid phrases found in query:', query);

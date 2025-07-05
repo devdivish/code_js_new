@@ -141,6 +141,11 @@ const DocumentList = () => {
   const fetchDocuments = useCallback(async (isLoadMore = false,attachmentQuery?: {PropId: string,ParentPropId: string, isAttachment: boolean}) => {
     // ... (previous checks for searchQuery remain the same) ...
 
+    if (fromDate && !toDate) {                             // ⬅️ ADDED
+      alert('Please select an end date before searching'); // ⬅️ ADDED
+      return;                                              // ⬅️ ADDED
+    }
+
     setLoading(true);
     if (!isLoadMore) {
       setError(null);
