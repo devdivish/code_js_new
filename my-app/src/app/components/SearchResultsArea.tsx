@@ -3,7 +3,7 @@ import React from 'react';
 // Import related components and types
 import DocumentCard from './DocumentCard';
 import DateFormatter from './DateFormatter'; // Pass down if DocumentCard needs it
-import { DocumentButton } from './DocumentButton'; // Pass down if DocumentCard needs it
+
 import { Document } from '../types'; // Assuming Document type is in ../types.ts
 
 interface SearchResultsAreaProps {

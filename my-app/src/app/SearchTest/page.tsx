@@ -196,7 +196,7 @@ const DocumentList = () => {
     // Include properties conditionally to avoid undefined where possible
     const payload: PayloadToSend = {
       queries: parsedApiQueries,
-      size: view === 'grid' ? gridPageSize : PAGE_SIZE,
+      size: view === 'grid' ? 10000 : PAGE_SIZE,
       search_type: searchType,
       stream: false, // Explicitly false
       ...(Object.keys(activeFilters).length > 0 && { filters: activeFilters }), // Add filters only if they exist

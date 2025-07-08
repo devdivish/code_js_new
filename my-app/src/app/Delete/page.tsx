@@ -2,32 +2,37 @@
 
 import React, { useEffect, useState, useCallback,useMemo ,FormEvent} from "react";
 import { useSearchParams } from "next/navigation";
-import { DocumentButton } from "./../components/DocumentButton"; // Assuming this component exists
+
 import DateFormatter from './../components/DateFormatter'; // adjust path as needed
 import FiltersSidebar from "../components/FiltersSidebar";
 import SearchResultsArea from "../components/SearchResultsArea";
+import Header from "../components/Header";
+
+
+import GridView1 from "../components/GridView1";
+
+// --- Configuration ---
+import { FaList, FaTh } from 'react-icons/fa';
 
 
 // --- Configuration ---
-import {API_BASE_URL, PAGE_SIZE, DOCTYPES_MAP, ES_DOCTYPE_FIELD, BRANCHES_MAP, ES_BRANCH_FIELD,SEARCH_TYPES} from '../constant'; // Assuming constants are in ../constants.ts
+import {API_BASE_URL, PAGE_SIZE, DOCTYPES_MAP, ES_DOCTYPE_FIELD, BRANCHES_MAP, ES_BRANCH_FIELD,SEARCH_TYPES,ES_EXTENSION_FIELD,EXTENSIONS_MAP} from '../constant'; // Assuming constants are in ../constants.ts
 
 
 // --- Interface
 import { Document, BackendResponse } from '../types'; // Assuming types are in ../types.ts
 
-
 // --- Component ---
 const DocumentList = () => {
   const searchParams = useSearchParams();
 
-//   chaged 
+
   const initialSearchTypeFromUrl = searchParams.get("type") as "any" | "all" | null;
-  const rawQueryFromUrl = searchParams.get("query") || ""; // Query as a JSON string or simple string
-//   const searchQuery = searchParams.get("query") || "";
+  const rawQueryFromUrl = searchParams.get("q") || ""; // Query as a JSON string or simple string
 
   
-  const docIdFromUrl=searchParams.get("propId") 
-  const parentIdFromUrl=searchParams.get("ParentpropId") || ""
+  const docIdFromUrl=searchParams.get("PropId");
+  const parentIdFromUrl=searchParams.get("ParentPropId") || "";
   const IsAttachmentFromUrl=searchParams.get("isAttachment")==="true" ;   // the case has to be handled where this might be string
 
   
@@ -39,18 +44,27 @@ const DocumentList = () => {
   const [loading, setLoading] = useState(false);
   const [searchAfter, setSearchAfter] = useState<any[] | null>(null); // For pagination
   const [currentViewTitle, setCurrentViewTitle] = useState<string | null>(null);
+  const [view, setView] = useState('reader'); // Add this line
+  const [gridPageSize, setGridPageSize] = useState(100);
+
 
   // Filter State
   const [yearFilter, setYearFilter] = useState<string>(""); // Use string to easily match select value
-  const [selectedDocTypes, setSelectedDocTypes] = useState<boolean[]>(
-    new Array(DOCTYPES_MAP.length).fill(false)
-  );
-  const [selectedBranchTypes, setSelectedBranchTypes] = useState<boolean[]>(
-    new Array(BRANCHES_MAP.length).fill(false)
-  );
 
+  // changed
+  const [selectedDocTypeValues, setSelectedDocTypeValues] = useState<Set<string>>(new Set());
+  const [selectedBranchTypeValues, setSelectedBranchTypeValues] = useState<Set<string>>(new Set());
+  const [selectedExtensionTypeValues, setSelectedExtensionTypeValues] = useState<Set<string>>(new Set());
+     // *** NEW ***: State for DocType Counts received from backend
+  const [docTypeCounts, setDocTypeCounts] = useState<{ [key: string]: number } | null>(null);
+  const [branchTypeCounts, setBranchTypeCounts] = useState<{ [key: string]: number } | null>(null);
+   
 
-  // --- BEGIN CHANGED SECTION ---
+  const [extensionTypeCounts, setExtensionTypeCounts] = useState<{ [key: string]: number } | null>(null);
+   
+   
+
+ 
   // Initialize searchType from URL parameter, default to "any" (or "all" if preferred)
   const [searchType, setSearchType] = useState<"any" | "all">(initialSearchTypeFromUrl || "any");
 //   const [searchType, setSearchType] = useState<"any" | "all">("any"); // Radio buttons recommended
@@ -71,7 +85,7 @@ const DocumentList = () => {
         console.warn("Query parameter 'q' is not a valid JSON array of strings. Treating as a single query term:", queryStr);
         return queryStr.trim() ? [queryStr] : [];
     } catch (e) {
-        // If JSON.parse fails, it means it's not a JSON string. Treat as a single query.
+        // If JSON.parse fails, it's not a JSON string. Treat as a single query.
         console.warn("Failed to parse query parameter 'q' as JSON. Treating as a single query term:", queryStr, e);
         return queryStr.trim() ? [queryStr] : []; // Fallback: treat as a single query string if not empty
     }
@@ -114,8 +128,13 @@ const DocumentList = () => {
 
 
 
-  const fetchDocuments = useCallback(async (isLoadMore = false,attachmentQuery?: {propId: string,ParentpropId: string, isAttachment: boolean}) => {
+  const fetchDocuments = useCallback(async (isLoadMore = false,attachmentQuery?: {PropId: string,ParentPropId: string, isAttachment: boolean}) => {
     // ... (previous checks for searchQuery remain the same) ...
+
+    if ((fromDate && !toDate) || (!fromDate && toDate)) {
+        setError("Please provide a complete date range (both start and end dates).");
+        return;
+    }
 
     setLoading(true);
     if (!isLoadMore) {
@@ -129,19 +148,23 @@ const DocumentList = () => {
     // --- Prepare Payload Data (intermediate steps) ---
     // 1. Filters
     const activeFilters: { [key: string]: string[] } = {}; // Renamed for clarity
-    const activeDocTypes = DOCTYPES_MAP
-      .filter((_, index) => selectedDocTypes[index])
-      .map(dt => dt.value);
+
+    // new
+    const activeDocTypes = Array.from(selectedDocTypeValues); // Convert Set to Array
     if (activeDocTypes.length > 0) {
-      activeFilters[ES_DOCTYPE_FIELD] = activeDocTypes;
+        activeFilters[ES_DOCTYPE_FIELD] = activeDocTypes;
     }
 
-    const activeBranches = BRANCHES_MAP
-      .filter((_, index) => selectedBranchTypes[index])
-      .map(b => b.value);
-    if (activeBranches.length > 0) {
-      activeFilters[ES_BRANCH_FIELD] = activeBranches;
+    const activeBranchTypes = Array.from(selectedBranchTypeValues); // Convert Set to Array
+    if (activeBranchTypes.length > 0) {
+        activeFilters[ES_BRANCH_FIELD] = activeBranchTypes;
     }
+
+    const activeExtensionTypes = Array.from(selectedExtensionTypeValues); // Convert Set to Array
+    if (activeExtensionTypes.length > 0) {
+        activeFilters[ES_EXTENSION_FIELD] = activeExtensionTypes;
+    }
+   
 
     // 2. Date Range
     const activeDateRange: { from?: string; to?: string } = {}; // Renamed for clarity
@@ -173,7 +196,7 @@ const DocumentList = () => {
     // Include properties conditionally to avoid undefined where possible
     const payload: PayloadToSend = {
       queries: parsedApiQueries,
-      size: PAGE_SIZE,
+      size: view === 'grid' ? gridPageSize : PAGE_SIZE,
       search_type: searchType,
       stream: false, // Explicitly false
       ...(Object.keys(activeFilters).length > 0 && { filters: activeFilters }), // Add filters only if they exist
@@ -183,8 +206,8 @@ const DocumentList = () => {
     if(attachmentQuery){
       endpoint='/handle-attachment-link'
        body2={
-        app_id: attachmentQuery?.propId,
-        parent_app_id: attachmentQuery?.ParentpropId,
+        app_id: attachmentQuery?.PropId,
+        parent_app_id: attachmentQuery?.ParentPropId,
         is_attachment: attachmentQuery?.isAttachment
       }
       console.log("ih")
@@ -224,7 +247,32 @@ const DocumentList = () => {
 
         setDocuments(isLoadMore && !attachmentQuery ? [...documents,...adaptedDocuments]: adaptedDocuments )
 
-        setSearchAfter(attachmentQuery? null : data.next_search_after);
+        setSearchAfter(attachmentQuery? null : (data.next_search_after || null));
+
+        // *** NEW *** Store the aggregation counts if available
+        if(!attachmentQuery){
+          if(data.aggregations?.doctype_counts){
+            setDocTypeCounts(data.aggregations.doctype_counts)
+          }
+          else if(!isLoadMore){
+            setDocTypeCounts({})
+          }
+
+          // for branch
+          if(data.aggregations?.branchtype_counts){
+            setBranchTypeCounts(data.aggregations.branchtype_counts)
+          } else if(!isLoadMore){
+            setBranchTypeCounts({})
+          }
+
+          // for branch
+          if(data.aggregations?.extensiontype_counts){
+            setExtensionTypeCounts(data.aggregations.extensiontype_counts)
+          } else if(!isLoadMore){
+            setExtensionTypeCounts({})
+          }
+        }
+      // Do not update counts if it was an attachment view or load more action without new counts
 
       }
       else{
@@ -243,10 +291,9 @@ const DocumentList = () => {
     }
   }, [
       // ... (dependencies remain the same) ...
-      parsedApiQueries, searchAfter, yearFilter, selectedDocTypes, selectedBranchTypes, searchType, fromDate, toDate,documents,adaptDocs
+      parsedApiQueries, searchAfter, yearFilter, selectedDocTypeValues, selectedBranchTypeValues,selectedExtensionTypeValues, searchType, fromDate, toDate,documents,adaptDocs, view, gridPageSize
     ]
   );
-
 
 
 
@@ -257,11 +304,11 @@ const DocumentList = () => {
 
 
   const handleAttachmentLinkClick = useCallback(async (clickedDoc: Document) => {
-    const propId=clickedDoc.propId || ""
-    const is_attachment=clickedDoc.IsAttachment === true || String(clickedDoc.IsAttachment).toLowerCase() === "true";
-    const ParentpropId=clickedDoc.ParentpropId || ""
+    const PropId = clickedDoc.PropId || ""
+    const is_attachment = clickedDoc.IsAttachment === true || String(clickedDoc.IsAttachment).toLowerCase() === "true";
+    const parentPropId = clickedDoc.ParentPropId || ""
     
-    const newUrl=`${window.location.origin}${window.location.pathname}?propId=${encodeURIComponent(propId)}&ParentpropId=${encodeURIComponent(ParentpropId)}&isAttachment=${encodeURIComponent(is_attachment)}`
+    const newUrl = `${window.location.origin}${window.location.pathname}?PropId=${encodeURIComponent(PropId)}&ParentPropId=${encodeURIComponent(parentPropId)}&isAttachment=${encodeURIComponent(is_attachment)}`
     console.log(newUrl)
   
   window.open(newUrl,'_blank');
@@ -272,7 +319,7 @@ const DocumentList = () => {
     if(docIdFromUrl){
     setDocuments([]);
     setSearchAfter(null);
-    fetchDocuments(false,{propId: docIdFromUrl,ParentpropId: parentIdFromUrl,isAttachment: IsAttachmentFromUrl}); // false indicates it's not a "Load More" action
+    fetchDocuments(false,{PropId: docIdFromUrl,ParentPropId: parentIdFromUrl,isAttachment: IsAttachmentFromUrl}); // false indicates it's not a "Load More" action
     }
     
   }, [docIdFromUrl,parentIdFromUrl,IsAttachmentFromUrl ]);
@@ -309,70 +356,136 @@ const DocumentList = () => {
       parsedApiQueries, // Re-fetch if query in URL changes
       yearFilter,
       rawQueryFromUrl,
-      selectedDocTypes,
-      selectedBranchTypes,
+      selectedDocTypeValues,
+      selectedBranchTypeValues,
+      selectedExtensionTypeValues,
       searchType,
       fromDate,
       toDate,
-      docIdFromUrl
+      docIdFromUrl,
+      gridPageSize,
+      view
   ]);
 
-  // --- Event Handlers ---
-  const handleDocTypeChange = (index: number) => {
-    setSelectedDocTypes((prev) => {
-      const newTypes = [...prev];
-      newTypes[index] = !newTypes[index];
-      return newTypes;
-    });
-  };
 
-  const handleBranchTypeChange = (index: number) => {
-    setSelectedBranchTypes((prev) => {
-      const newTypes = [...prev];
-      newTypes[index] = !newTypes[index];
-      return newTypes;
+  // --- Event Handlers ---
+  // --- Filter Change Handlers ---
+    // *** CHANGED ***: Handler now accepts the DocType 'value' (string)
+    const handleDocTypeChange = useCallback((docTypeValue: string) => {
+      setSelectedDocTypeValues(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(docTypeValue)) {
+              newSet.delete(docTypeValue); // Uncheck
+          } else {
+              newSet.add(docTypeValue);    // Check
+          }
+          return newSet;
+      });
+      // Search is triggered by useEffect dependency change
+  }, []);
+
+  const handleBranchTypeChange = useCallback((branchTypeValue: string) => {
+    setSelectedBranchTypeValues(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(branchTypeValue)) {
+            newSet.delete(branchTypeValue); // Uncheck
+        } else {
+            newSet.add(branchTypeValue);    // Check
+        }
+        return newSet;
     });
-  };
+    // Search is triggered by useEffect dependency change
+}, []);
+
+const handleExtensionTypeChange = useCallback((extensionTypeValue: string) => {
+  setSelectedExtensionTypeValues(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(extensionTypeValue)) {
+          newSet.delete(extensionTypeValue); // Uncheck
+      } else {
+          newSet.add(extensionTypeValue);    // Check
+      }
+      return newSet;
+  });
+  // Search is triggered by useEffect dependency change
+}, []);
 
   // Consider using Radio buttons for Search Type for single selection
   const handleSearchTypeChange = (type: "any" | "all") => {
       setSearchType(type);
   }
 
+  const handleClearAllFilters = () => {
+    setYearFilter('');
+    setFromDate('');
+    setToDate('');
+    setSearchType('any'); // Reset to default
+    setSelectedDocTypeValues(new Set());
+    setSelectedBranchTypeValues(new Set());
+    // setSearchQueries([]); // Decide if you want to clear search terms too
+    // You might also want to trigger a new search with cleared filters here
+    // or reset pagination, etc.
+    console.log("All filters cleared!");
+  };
+
   
   // --- Render ---
   return (
-    <div className="flex">
-       {/* Sidebar for Filters */}
-       <FiltersSidebar
-        // Pass all filter states and handlers
-        yearFilter={yearFilter} setYearFilter={setYearFilter}
-        fromDate={fromDate} setFromDate={setFromDate}
-        toDate={toDate} setToDate={setToDate}
-        searchType={searchType} handleSearchTypeChange={handleSearchTypeChange}
-        selectedDocTypes={selectedDocTypes} handleDocTypeChange={handleDocTypeChange}
-        selectedBranchTypes={selectedBranchTypes} handleBranchTypeChange={handleBranchTypeChange}
-        // Pass constants
-        DOCTYPES_MAP={DOCTYPES_MAP}
-        BRANCHES_MAP={BRANCHES_MAP}
-        SEARCH_TYPES={SEARCH_TYPES}
-      />
+    <div className="bg-white text-black">
+      <Header />
+      <div className="flex">
+        {view === 'reader' && (
+          <FiltersSidebar
+            // Pass all filter states and handlers
+            searchQueries={parsedApiQueries}
+            handleClearAllFilters={handleClearAllFilters}
+            yearFilter={yearFilter} setYearFilter={setYearFilter}
+            fromDate={fromDate} setFromDate={setFromDate}
+            toDate={toDate} setToDate={setToDate}
+            searchType={searchType} handleSearchTypeChange={handleSearchTypeChange}
+            selectedDocTypeValues={selectedDocTypeValues} handleDocTypeChange={handleDocTypeChange}
+            docTypeCounts={docTypeCounts}
+            selectedBranchTypeValues={selectedBranchTypeValues} handleBranchTypeChange={handleBranchTypeChange}
+            branchTypeCounts={branchTypeCounts}
+            selectedExtensionTypeValues={selectedExtensionTypeValues} handleExtensionTypeChange={handleExtensionTypeChange}
+            extensionTypeCounts={extensionTypeCounts} 
+            // Pass constants
+            DOCTYPES_MAP={DOCTYPES_MAP}
+            BRANCHES_MAP={BRANCHES_MAP}
+            EXTENSIONS_MAP={EXTENSIONS_MAP}
+            SEARCH_TYPES={SEARCH_TYPES}
+            isLoading={loading}
+          />
+        )}
 
-      {/* Document List Section */}
-      <SearchResultsArea
-        // Pass data, loading/error states, and action handlers
-        loading={loading}
-        error={error}
-        documents={documents}
-        searchQuery={parsedApiQueries}
-        searchAfter={searchAfter}
-        fetchDocuments={fetchDocuments} // For Load More button
-        handleAttachmentLinkClick={handleAttachmentLinkClick} // For DocumentCard
-        currentViewTitle={currentViewTitle} // Pass context title
-        // Pass down components if needed by DocumentCard through SearchResultsArea
-        // DateFormatter={DateFormatter}
-        // DocumentButton={DocumentButton}
-      />
+        {/* Document List Section */}
+        <div className={view === 'reader' ? "w-5/6 p-4" : "w-full p-4"}>
+          <div className="flex justify-end mb-4">
+            <button onClick={() => setView('reader')} className={`p-2 ${view === 'reader' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} title="Reader View"><FaList /></button>
+            <button onClick={() => setView('grid')} className={`p-2 ${view === 'grid' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} title="Grid View"><FaTh /></button>
+          </div>
+          {view === 'reader' ? (
+            <SearchResultsArea
+              // Pass data, loading/error states, and action handlers
+              loading={loading}
+              error={error}
+              documents={documents}
+              searchQuery={parsedApiQueries}
+              searchAfter={searchAfter}
+              fetchDocuments={fetchDocuments} // For Load More button
+              handleAttachmentLinkClick={handleAttachmentLinkClick} // For DocumentCard
+              currentViewTitle={currentViewTitle} // Pass context title
+            />
+          ) : (
+            <GridView1 
+              documents={documents} 
+              pageSize={gridPageSize} 
+              onPageSizeChange={setGridPageSize} 
+              isLoading={loading} 
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 };

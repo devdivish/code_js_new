@@ -1,5 +1,5 @@
 
-// --- Keep all your existing imports ---
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useReactTable, getCoreRowModel, getPaginationRowModel, ColumnDef, flexRender } from '@tanstack/react-table';
 import { X,Download, Eye } from 'lucide-react';
@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Document } from '../types';
-import DocumentViewerModal from './DocumentViewerModal';
+import { Modal } from './Modal';
 
 // --- NEW: Import the DateFormatter component ---
 import DateFormatter from '../components/DateFormatter'; // Adjust path if needed
@@ -36,21 +36,20 @@ interface DataTableProps {
 interface MetadataPanelProps {
   document: Document | null;
   onClose: () => void;
-  onView: (document: Document) => void; // NEW: Prop to handle viewing
+  onView: (document: Document) => void; 
+  onDownload: (document: Document) => void;
 }
 
-const MetadataPanel: React.FC<MetadataPanelProps> = ({ document, onClose, onView }) => {
-  const pythonServerUrl = process.env.REACT_APP_PYTHON_SERVER_URL || 'http://192.168.10.144:8000';
+const MetadataPanel: React.FC<MetadataPanelProps> = ({ document, onClose, onView, onDownload }) => {
 
   if (!document) return null;
 
   const fileName = document?.FileName || "file1";
-  const downloadUrl = fileName ? `${pythonServerUrl}/download/${encodeURIComponent(fileName)}` : '';
   
   const metadataEntries = Object.entries(document).filter(([key]) => key !== 'Text' && key !== 'id');
 
   return (
-    <aside className="w-full md:w-1/4 h-full border-l border-gray-200 bg-slate-50 shadow-lg flex flex-col">
+    <aside className="w-full md:w-1/4 h-full border-l border-gray-200 bg-slate-50 shadow-lg flex flex-col flex-shrink-0">
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         {/* Header Group */}
         <div className="flex items-center gap-1"> {/* Reduced gap for more icons */}
@@ -69,11 +68,9 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ document, onClose, onView
           )}
           {/* Download Icon Button */}
           {fileName && (
-            <a href={downloadUrl} target="_blank" rel="noopener noreferrer" download={fileName}>
-              <Button variant="ghost" size="icon" title={`Download ${fileName}`} aria-label={`Download ${fileName}`}>
-                <Download className="h-5 w-5 text-gray-600 hover:text-gray-900" />
-              </Button>
-            </a>
+            <Button variant="ghost" size="icon" title={`Download ${fileName}`} aria-label={`Download ${fileName}`} onClick={() => onDownload(document)}>
+              <Download className="h-5 w-5 text-gray-600 hover:text-gray-900" />
+            </Button>
           )}
         </div>
         {/* Close Button */}
@@ -136,6 +133,8 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
 
   // NEW: State for the document viewer modal
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState<string>('');
+  const [isModalContentLoading, setIsModalContentLoading] = useState<boolean>(false);
   const [documentToView, setDocumentToView] = useState<Document | null>(null);
 
 
@@ -212,7 +211,6 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
         getPaginationRowModel: getPaginationRowModel(),
         globalFilterFn: 'includesString',
         enableRowSelection: true,
-        pageCount: Math.ceil(documents.length / pageSize),
       });
     
       useEffect(() => {
@@ -232,10 +230,93 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
 
 
           // NEW: Handler to open the viewer modal
-  const handleViewDocument = (doc: Document) => {
-    setDocumentToView(doc);
-    setIsModalOpen(true);
-  };
+          const pythonServerUrl = process.env.REACT_APP_PYTHON_SERVER_URL || `http://192.168.10.144:8000`;
+
+          const getFileExtension = (name: string): string | undefined => {
+            const lastDot = name.lastIndexOf('.');
+            if (lastDot === -1 || lastDot === 0 || lastDot === name.length - 1) {
+              return undefined;
+            }
+            return name.substring(lastDot + 1).toLowerCase();
+          };
+        
+          const handleOpenDocument = async (doc: Document) => {
+            
+            if (!doc.FilePath) {
+              console.error("No file path provided for viewing.");
+              alert("File path is missing, cannot open document.");
+              return;
+            }
+            
+            setDocumentToView(doc);
+            const parts = doc.SystemPath? doc.SystemPath.split('/'):[] ;
+            const fileName = parts.pop() || "";
+            const fileExtension = getFileExtension(fileName);
+            const viewUrlBase = `${pythonServerUrl}/api/documents/${encodeURIComponent(doc.FilePath)}`;
+            const modalViewExtensions = ['doc', 'docx', 'html'];
+        
+            if (fileExtension && modalViewExtensions.includes(fileExtension)) {
+              setIsModalContentLoading(true);
+              setModalContent('');
+              setIsModalOpen(true);
+        
+              try {
+                const response = await fetch(`${viewUrlBase}?action=view`);
+                let responseText = await response.text();
+        
+                if (!response.ok) {
+                  let errorDetail = responseText;
+                  try {
+                    const errorJson = JSON.parse(responseText);
+                    errorDetail = errorJson.detail || errorJson.message || responseText;
+                  } catch (e) {
+                    // Not JSON
+                  }
+                  throw new Error(`Preview generation failed: ${response.status} ${response.statusText}. ${errorDetail}`);
+                }
+                
+                setModalContent(responseText.trim() ? responseText : "<p>Preview is empty or could not be generated.</p>");
+              } catch (error) {
+                console.error("Error fetching document content for modal:", error);
+                const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+                setModalContent(`<div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded"><p><strong>Error Loading Preview:</strong></p><p>${errorMessage}</p></div>`);
+              } finally {
+                setIsModalContentLoading(false);
+              }
+            } else {
+              const viewUrl = `${viewUrlBase}?action=view`;
+              try {
+                const newTab = window.open(viewUrl, '_blank', 'noopener,noreferrer');
+                if (!newTab) {
+                    alert("Failed to open the document. Your browser's pop-up blocker might have prevented it.");
+                }
+              } catch (error) {
+                console.error("Error opening document in new tab:", error);
+                const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+                alert(`Failed to open document: ${errorMessage}`);
+              }
+            }
+          };
+        
+          const handleDownloadDocument = (doc: Document) => {
+            if (!doc.FilePath) {
+              console.error("No file path provided for downloading.");
+              alert("File path is missing, cannot download document.");
+              return;
+            }
+            const downloadUrl = `${pythonServerUrl}/api/documents/${encodeURIComponent(doc.FilePath)}?action=download`;
+            
+            try {
+              const newWindow = window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+              if (!newWindow) {
+                console.log("new window not opended")
+              }
+            } catch (error) {
+                console.error("Error initiating download:", error);
+                const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+                alert(`Failed to initiate download: ${errorMessage}`);
+            }
+          };
 
       
          // NEW: Handler for the "Download All" button
@@ -260,10 +341,9 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
     <> {/* NEW: Use a fragment to render modal outside the main layout flow */}
       <div className="flex w-full h-[calc(100vh-some-offset)]">
         {/* Main Content Area */}
-        <div className="flex-grow p-4 md:p-6 lg:p-8 overflow-auto">
-          <div className="w-full space-y-4">
+        <div className="flex-1 p-4 md:p-6 lg:p-8 flex flex-col gap-4 min-w-0">
             {/* Search, Download All, and Page-size controls */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 flex-shrink-0">
               <Input
                 placeholder="Search..."
                 value={globalFilter}
@@ -295,9 +375,9 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
             </div>
 
                  {/* Table container */}
-                      <div className="overflow-auto rounded-lg shadow-lg border">
+                      <div className="overflow-auto rounded-lg shadow-lg border flex-grow">
                         <Table className="min-w-full divide-y divide-gray-200 bg-white">
-                          <TableHeader className="bg-gray-100">
+                          <TableHeader className="bg-gray-100 sticky top-0 z-10">
                             {table.getHeaderGroups().map(headerGroup => (
                               <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map(header => (
@@ -347,7 +427,7 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
                       </div>
             
                       {/* Pagination footer */}
-                      <div className="flex flex-col md:flex-row items-center justify-between py-4 space-y-2 md:space-y-0">
+                      <div className="flex flex-col md:flex-row items-center justify-between py-4 space-y-2 md:space-y-0 flex-shrink-0">
                         <span className="text-sm text-gray-600">
                           {table.getPrePaginationRowModel().rows.length} rows total
                         </span>
@@ -364,7 +444,6 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
                         </div>
                       </div>
                     </div>
-                  </div>
           
         
         
@@ -373,20 +452,26 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
           <MetadataPanel
             document={selectedDocumentForMetadata}
             onClose={() => setIsMetadataPanelOpen(false)}
-            onView={handleViewDocument} // NEW: Pass the handler to the panel
+            onView={handleOpenDocument} // NEW: Pass the handler to the panel
+            onDownload={handleDownloadDocument}
           />
         )}
       </div>
 
-      {/* NEW: Render the modal when it's open */}
-      {isModalOpen && documentToView && (
-        <DocumentViewerModal
-          document={documentToView}
-          onClose={() => setIsModalOpen(false)}
-        />
-      )}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={documentToView?.FileName || 'Document'}
+        isLoading={isModalContentLoading}
+      >
+        <div dangerouslySetInnerHTML={{ __html: modalContent }} />
+      </Modal>
     </>
   );
 };
 
 export default DataTable;
+""
+
+ 
+
