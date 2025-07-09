@@ -7,7 +7,7 @@ import DateFormatter from './../components/DateFormatter'; // adjust path as nee
 import FiltersSidebar from "../components/FiltersSidebar";
 import SearchResultsArea from "../components/SearchResultsArea";
 import Header from "../components/Header";
-import GridView from "../components/GridView";
+import GridView2 from "../components/GridView2";
 
 import GridView1 from "../components/GridView1";
 
@@ -433,7 +433,7 @@ const handleExtensionTypeChange = useCallback((extensionTypeValue: string) => {
   return (
     <div className="bg-white text-black">
       <Header />
-      <div className="flex">
+      <div className="flex h-[calc(100vh-4rem)]">
         {view === 'reader' && (
           <FiltersSidebar
             // Pass all filter states and handlers
@@ -459,31 +459,35 @@ const handleExtensionTypeChange = useCallback((extensionTypeValue: string) => {
         )}
 
         {/* Document List Section */}
-        <div className={view === 'reader' ? "w-5/6 p-4" : "w-full p-4"}>
-          <div className="flex justify-end mb-4">
+        <div className={`${view === 'reader' ? 'w-5/6' : 'w-full'} p-4 h-full flex flex-col`}>
+          <div className="flex justify-end mb-4 flex-shrink-0">
             <button onClick={() => setView('reader')} className={`p-2 ${view === 'reader' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} title="Reader View"><FaList /></button>
             <button onClick={() => setView('grid')} className={`p-2 ${view === 'grid' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} title="Grid View"><FaTh /></button>
           </div>
-          {view === 'reader' ? (
-            <SearchResultsArea
-              // Pass data, loading/error states, and action handlers
-              loading={loading}
-              error={error}
-              documents={documents}
-              searchQuery={parsedApiQueries}
-              searchAfter={searchAfter}
-              fetchDocuments={fetchDocuments} // For Load More button
-              handleAttachmentLinkClick={handleAttachmentLinkClick} // For DocumentCard
-              currentViewTitle={currentViewTitle} // Pass context title
-            />
-          ) : (
-            <GridView1 
-              documents={documents} 
-              pageSize={gridPageSize} 
-              onPageSizeChange={setGridPageSize} 
-              isLoading={loading} 
-            />
-          )}
+          <div className="flex-grow min-h-0">
+            {view === 'reader' ? (
+              <SearchResultsArea
+                // Pass data, loading/error states, and action handlers
+                loading={loading}
+                error={error}
+                documents={documents}
+                searchQuery={parsedApiQueries}
+                searchAfter={searchAfter}
+                fetchDocuments={fetchDocuments} // For Load More button
+                handleAttachmentLinkClick={handleAttachmentLinkClick} // For DocumentCard
+                currentViewTitle={currentViewTitle} // Pass context title
+              />
+            ) : (
+              <div className="h-full">
+                <GridView1 
+                  documents={documents} 
+                  pageSize={gridPageSize} 
+                  onPageSizeChange={setGridPageSize} 
+                  isLoading={loading} 
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

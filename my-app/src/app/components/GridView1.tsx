@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Document } from '../types';
 import { Modal } from './Modal';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 // --- NEW: Import the DateFormatter component ---
 import DateFormatter from '../components/DateFormatter'; // Adjust path if needed
@@ -375,56 +376,56 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
             </div>
 
                  {/* Table container */}
-                      <div className="overflow-auto rounded-lg shadow-lg border flex-grow">
-                        <Table className="min-w-full divide-y divide-gray-200 bg-white">
-                          <TableHeader className="bg-gray-100 sticky top-0 z-10">
-                            {table.getHeaderGroups().map(headerGroup => (
-                              <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map(header => (
-                                  <TableHead
-                                    key={header.id}
-                                    className="py-3 px-6 text-left font-semibold text-gray-700 first:pl-8"
-                                  >
-                                    {header.isPlaceholder ? null : flexRender(
-                                      header.column.columnDef.header,
-                                      header.getContext()
-                                    )}
-                                  </TableHead>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableHeader>
-            
-                          <TableBody>
-                            {table.getRowModel().rows.length > 0 ? (
-                              table.getRowModel().rows.map(row => (
-                                <TableRow
-                                  key={row.id}
-                                  className="odd:bg-white even:bg-gray-50 hover:bg-gray-100"
-                                >
-                                  {row.getVisibleCells().map(cell => (
-                                    <TableCell
-                                      key={cell.id}
-                                      className="py-3 px-6 first:pl-8 first:pr-4 whitespace-nowrap"
-                                    >
-                                      {flexRender(
-                                        cell.column.columnDef.cell,
-                                        cell.getContext()
-                                      )}
-                                    </TableCell>
-                                  ))}
-                                </TableRow>
-                              ))
-                            ) : (
-                              <TableRow>
-                                <TableCell colSpan={columns.length} className="py-8 text-center text-gray-500">
-                                  {isLoading ? 'Loading...' : 'No records found.'}
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
+            <ScrollArea className="h-[65vh] rounded-md border overflow-y-auto">
+  <Table>
+    <TableHeader className="sticky top-0 z-10 bg-background">
+      {table.getHeaderGroups().map(headerGroup => (
+        <TableRow key={headerGroup.id}>
+          {headerGroup.headers.map(header => (
+            <TableHead
+              key={header.id}
+              className="py-3 px-6 text-left font-semibold text-gray-700 first:pl-8"
+            >
+              {header.isPlaceholder
+                ? null
+                : flexRender(header.column.columnDef.header, header.getContext())}
+            </TableHead>
+          ))}
+        </TableRow>
+      ))}
+    </TableHeader>
+
+    <TableBody>
+      {table.getRowModel().rows.length > 0 ? (
+        table.getRowModel().rows.map(row => (
+          <TableRow
+            key={row.id}
+            className="odd:bg-white even:bg-gray-50 hover:bg-gray-100"
+          >
+            {row.getVisibleCells().map(cell => (
+              <TableCell
+                key={cell.id}
+                className="py-3 px-6 first:pl-8 first:pr-4 whitespace-nowrap"
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))
+      ) : (
+        <TableRow>
+          <TableCell
+            colSpan={columns.length}
+            className="py-8 text-center text-gray-500"
+          >
+            {isLoading ? "Loading..." : "No records found."}
+          </TableCell>
+        </TableRow>
+      )}
+    </TableBody>
+  </Table>
+  <ScrollBar orientation="horizontal" />
+</ScrollArea>
             
                       {/* Pagination footer */}
                       <div className="flex flex-col md:flex-row items-center justify-between py-4 space-y-2 md:space-y-0 flex-shrink-0">
@@ -474,4 +475,3 @@ export default DataTable;
 ""
 
  
-

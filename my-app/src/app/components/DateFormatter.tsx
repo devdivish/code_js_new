@@ -7,10 +7,10 @@ const DateFormatter = ({ timestamp }) => {
 
   const date = new Date(timestamp);
   const formattedDate = date
-    .toLocaleString('en-GB', {
+    .toLocaleString('en-US', {
       timeZone:"UTC",
-      day: '2-digit',
       month: '2-digit',
+      day: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',

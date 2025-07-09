@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Document } from '../types';
 
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 // --- NEW: Import the DateFormatter component ---
 import DateFormatter from '../components/DateFormatter'; // Adjust path if needed
 
@@ -260,6 +261,7 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
           </div>
 
           {/* Table container */}
+          <ScrollArea >
           <div className="overflow-auto rounded-lg shadow-lg border">
             <Table className="min-w-full divide-y divide-gray-200 bg-white">
               <TableHeader className="bg-gray-100">
@@ -310,6 +312,8 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
               </TableBody>
             </Table>
           </div>
+           <ScrollBar orientation="horizontal" />
+          </ScrollArea>
 
           {/* Pagination footer */}
           <div className="flex flex-col md:flex-row items-center justify-between py-4 space-y-2 md:space-y-0">
