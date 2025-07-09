@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback,useMemo ,FormEvent} from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { DocumentButton } from "./../components/DocumentButton"; // Assuming this component exists
 import DateFormatter from './../components/DateFormatter'; // adjust path as needed
 import FiltersSidebar from "../components/FiltersSidebar";
@@ -25,6 +25,7 @@ import { Document, BackendResponse } from '../types'; // Assuming types are in .
 // --- Component ---
 const DocumentList = () => {
   const searchParams = useSearchParams();
+  const router = useRouter();
 
 
   const initialSearchTypeFromUrl = searchParams.get("type") as "any" | "all" | null;
@@ -62,7 +63,6 @@ const DocumentList = () => {
 
   const [extensionTypeCounts, setExtensionTypeCounts] = useState<{ [key: string]: number } | null>(null);
    
-   
 
  
   // Initialize searchType from URL parameter, default to "any" (or "all" if preferred)
@@ -92,6 +92,41 @@ const DocumentList = () => {
   }, []);
 
   const parsedApiQueries = useMemo(() => getParsedQueries(rawQueryFromUrl), [rawQueryFromUrl, getParsedQueries]);
+
+  const [headerSearchQuery, setHeaderSearchQuery] = useState('');
+
+  useEffect(() => {
+    const formattedQuery = parsedApiQueries.map(q => `"${q}"`).join(', ');
+    setHeaderSearchQuery(formattedQuery);
+  }, [parsedApiQueries]);
+
+  const handleHeaderSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!headerSearchQuery.trim()) {
+      router.push(`/SearchTest`);
+      return;
+    }
+
+    const phraseMatches = headerSearchQuery.matchAll(/"([^"]*)"/g);
+    let extractedPhrases = Array.from(phraseMatches, match => match[1])
+                                 .filter(phrase => phrase.trim() !== "");
+
+    if (extractedPhrases.length === 0 && headerSearchQuery.trim() !== "") {
+        extractedPhrases = [headerSearchQuery.trim()];
+    }
+
+    if (extractedPhrases.length === 0) {
+         alert('Please enter search terms enclosed in double quotes, e.g., "term one" "term two".');
+         return;
+    }
+
+    const params = new URLSearchParams({
+        q: JSON.stringify(extractedPhrases),
+        type: searchType,
+    });
+    router.push(`/SearchTest?${params.toString()}`);
+  };
 
 
   //data adaptation helper function
@@ -432,7 +467,11 @@ const handleExtensionTypeChange = useCallback((extensionTypeValue: string) => {
   // --- Render ---
   return (
     <div className="bg-white text-black">
-      <Header />
+      <Header 
+        searchQuery={headerSearchQuery}
+        onSearchQueryChange={setHeaderSearchQuery}
+        onSearchSubmit={handleHeaderSearchSubmit}
+      />
       <div className="flex h-[calc(100vh-4rem)]">
         {view === 'reader' && (
           <FiltersSidebar
