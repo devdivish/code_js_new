@@ -243,7 +243,7 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
         
           const handleOpenDocument = async (doc: Document) => {
             
-            if (!doc.FilePath) {
+            if (!doc.SystemPath) {
               console.error("No file path provided for viewing.");
               alert("File path is missing, cannot open document.");
               return;
