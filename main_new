@@ -1,0 +1,72 @@
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+import os
+import pypandoc
+pypandoc.download_pandoc()
+
+app = FastAPI()
+
+# Allow CORS from React app origin
+origins = [
+    os.getenv("REACT_APP_PYTHON_SERVER_URL", "http://localhost:3000")
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Base directory where documents are stored
+BASE_DIR = os.getenv("DOCUMENTS_DIR", "./documents")
+
+@app.get("/api/documents/{file_path:path}")
+async def handle_document(
+    file_path: str,
+    action: str = Query(..., regex="^(view|download)$")
+):
+    # Normalize and secure path
+    safe_path = os.path.normpath(os.path.join(BASE_DIR, file_path))
+    print(safe_path)
+
+
+    if not os.path.exists(safe_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    ext = os.path.splitext(safe_path)[1].lower().lstrip('.')
+    print("action")
+    # VIEW action: convert to HTML for supported types
+    if action == "view":
+        if ext in ["doc", "docx", "html"]:
+            try:
+                if ext in ["doc", "docx"]:
+                    # Convert Word docs to HTML using pypandoc
+                    html = pypandoc.convert_file(safe_path, 'html')
+                else:
+                    # Serve existing HTML file
+                    with open(safe_path, 'r', encoding='utf-8') as f:
+                        html = f.read()
+                return HTMLResponse(content=html, status_code=200)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to generate preview: {str(e)}")
+        else:
+            # For others, return download URL or let frontend open
+            return FileResponse(safe_path)
+
+    # DOWNLOAD action: always attachment
+    elif action == "download":
+        filename = os.path.basename(safe_path)
+        return FileResponse(
+            safe_path,
+            media_type='application/octet-stream',
+            filename=filename
+        )
+
+    raise HTTPException(status_code=400, detail="Unsupported action")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main_new:app", host="0.0.0.0", port=8080, reload=True)
