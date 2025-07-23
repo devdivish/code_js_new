@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useReactTable, getCoreRowModel, getPaginationRowModel, ColumnDef, flexRender } from '@tanstack/react-table';
+import { FileText, FileArchive, ImageIcon } from 'lucide-react'; // NEW: Professional icons
 import {
   Table,
   TableBody,
@@ -44,7 +45,7 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
       {
         id: 'select',
         header: ({ table }) => (
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center h-full">
             <Checkbox
               checked={table.getIsAllPageRowsSelected()}
               onCheckedChange={value => table.toggleAllPageRowsSelected(!!value)}
@@ -53,7 +54,7 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
           </div>
         ),
         cell: ({ row }) => (
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center h-full">
             <Checkbox
               checked={row.getIsSelected()}
               onCheckedChange={value => {
@@ -70,23 +71,31 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
       },
       ...baseCols.map(key => ({
         accessorKey: key,
-        header: () => key,
-        cell: ({ getValue }) => {
+        header: () => key.replace(/_/g, ' '), // Nicer header formatting
+        cell: ({ row, getValue }) => {
           const value = getValue();
           if (key === 'FileName') {
             const name = String(value);
-            let icon = '📄';
-            if (name.endsWith('.pdf')) icon = '📄';
-            else if (/\.(docx?|pptx?|xlsx?)$/.test(name)) icon = '🗂️';
-            else if (/\.(jpe?g|png|gif)$/.test(name)) icon = '🖼️';
+            let IconComponent = FileText;
+            if (name.endsWith('.pdf')) IconComponent = FileText;
+            else if (/\.(docx?|pptx?|xlsx?)$/.test(name)) IconComponent = FileArchive;
+            else if (/\.(jpe?g|png|gif)$/.test(name)) IconComponent = ImageIcon;
             return (
               <div className="flex items-center space-x-3">
-                <span className="text-lg">{icon}</span>
-                <span className="truncate max-w-xs">{name}</span>
+                <IconComponent className="h-5 w-5 text-slate-500 flex-shrink-0" />
+                <span 
+                  className="font-medium text-slate-800 truncate max-w-xs hover:text-blue-600 cursor-pointer"
+                  onClick={() => {
+                    setSelectedDocumentForMetadata(row.original);
+                    setIsMetadataPanelOpen(true);
+                  }}
+                >
+                  {name}
+                </span>
               </div>
             );
           }
-          return <span className="truncate max-w-xs">{String(value)}</span>;
+          return <span className="text-slate-600 truncate max-w-xs">{String(value)}</span>;
         },
       }))
     ];
@@ -204,8 +213,8 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
 
   return (
     <>
-      <div className="flex w-full h-[calc(100vh-some-offset)]">
-        <div className="flex-1 p-4 md:p-6 lg:p-8 flex flex-col gap-4 min-w-0">
+      <div className="flex w-full h-screen bg-slate-50">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col gap-4 min-w-0">
           <TableToolbar
             table={table}
             globalFilter={globalFilter}
@@ -214,55 +223,58 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
             onPageSizeChange={onPageSizeChange}
             isLoading={isLoading}
           />
-          <ScrollArea className="h-[65vh] rounded-md border overflow-y-auto">
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-background">
-                {table.getHeaderGroups().map(headerGroup => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map(header => (
-                      <TableHead
-                        key={header.id}
-                        className="py-3 px-6 text-left font-semibold text-gray-700 first:pl-8"
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.length > 0 ? (
-                  table.getRowModel().rows.map(row => (
-                    <TableRow
-                      key={row.id}
-                      className="odd:bg-white even:bg-gray-50 hover:bg-gray-100"
-                    >
-                      {row.getVisibleCells().map(cell => (
-                        <TableCell
-                          key={cell.id}
-                          className="py-3 px-6 first:pl-8 first:pr-4 whitespace-nowrap"
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex-grow overflow-hidden">
+            <ScrollArea className="h-full">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-slate-100/75 backdrop-blur-sm">
+                  {table.getHeaderGroups().map(headerGroup => (
+                    <TableRow key={headerGroup.id} className="border-b-slate-200">
+                      {headerGroup.headers.map(header => (
+                        <TableHead
+                          key={header.id}
+                          className="py-3 px-6 text-left text-xs font-bold text-slate-600 uppercase tracking-wider"
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
                       ))}
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="py-8 text-center text-gray-500"
-                    >
-                      {isLoading ? "Loading..." : "No records found."}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length > 0 ? (
+                    table.getRowModel().rows.map(row => (
+                      <TableRow
+                        key={row.id}
+                        className="border-b border-slate-200 transition-colors hover:bg-blue-50 data-[state=selected]:bg-blue-100"
+                        data-state={row.getIsSelected() && 'selected'}
+                      >
+                        {row.getVisibleCells().map(cell => (
+                          <TableCell
+                            key={cell.id}
+                            className="py-4 px-6 whitespace-nowrap"
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="py-16 text-center text-slate-500"
+                      >
+                        {isLoading ? "Loading documents..." : "No records found."}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
           <TablePagination table={table} />
         </div>
         {isMetadataPanelOpen && (
