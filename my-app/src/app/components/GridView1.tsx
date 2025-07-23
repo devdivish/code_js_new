@@ -279,6 +279,7 @@ const DataTable: React.FC<DataTableProps> = ({ documents, pageSize, onPageSizeCh
         onClose={() => setIsModalOpen(false)}
         title={documentToView?.FileName || 'Document'}
         isLoading={isModalContentLoading}
+        viewUrl={`${pythonServerUrl}/api/documents/${encodeURIComponent(documentToView?.SystemPath || '')}?action=view`}
       >
         <div dangerouslySetInnerHTML={{ __html: modalContent }} />
       </Modal>

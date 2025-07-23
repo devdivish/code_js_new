@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-
+import React, { useEffect } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -7,10 +6,27 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   isLoading?: boolean;
+  viewUrl?: string; // NEW: Optional prop for the "Open in new page" link
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, isLoading }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, isLoading, viewUrl }) => {
+  // NEW: Effect to handle Escape key press
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleEsc);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
+
   return (
     <div 
       className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-4 transition-opacity duration-300 ease-in-out"
@@ -30,19 +46,32 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
             ×
           </button>
         </div>
-        <div className="p-5 flex-grow overflow-y-auto">
+        <div className="p-5 flex-grow overflow-y-auto bg-gray-50">
           {isLoading ? (
             <div className="flex justify-center items-center h-32">
               <p className="text-gray-600">Loading preview...</p>
-              {/* Optional: Add a spinner SVG or component here */}
             </div>
           ) : (
-            <div className="prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none">
+            // UPDATED: Styling for a more "Medium-like" article view
+            <div className="prose prose-sm sm:prose-base lg:prose-lg xl:prose-xl max-w-4xl mx-auto bg-white p-8 rounded-sm shadow-sm">
                {children}
             </div>
           )}
         </div>
-        <div className="flex items-center justify-end p-4 border-t border-gray-200 rounded-b">
+        <div className="flex items-center justify-between p-4 border-t border-gray-200 rounded-b">
+          {/* NEW: "Open in new page" button */}
+          {viewUrl ? (
+            <a
+              href={viewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Open document in new page
+            </a>
+          ) : (
+            <div /> // Empty div to keep the "Close" button to the right
+          )}
           <button
             type="button"
             onClick={onClose}
