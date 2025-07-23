@@ -17,7 +17,7 @@ const DocumentActions: React.FC<DocumentActionsProps> = ({ filePath, fileName: i
   const fileName = initialFileName || "Document";
 
   // It's good practice to make URLs configurable, e.g., from environment variables
-  const pythonServerUrl = process.env.REACT_APP_PYTHON_SERVER_URL || `http://192.168.10.144:8000`;
+  const pythonServerUrl = process.env.NEXT_PUBLIC_PYTHON_SERVER_URL || `http://192.168.10.144:8000`;
 
   const getFileExtension = (name: string): string | undefined => {
     const lastDot = name.lastIndexOf('.');

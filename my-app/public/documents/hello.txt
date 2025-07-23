@@ -1,0 +1,37 @@
+const [searchType, setSearchType] = useState('Any of These');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  
+  const [sources, setSources] = useState<{
+    [key: string]: boolean;
+  }>({
+    option1: false,
+    option2: false,
+    option3: false,
+    option4: false,
+    option5: false,
+    option6: false,
+  });
+  
+  const [docType, setDocType] = useState('Any of These');
+  const [from, setFrom] = useState('Any of These');
+
+  // Handle changes for search input
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+  };
+
+  // Handle search button click
+  const handleSearchClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    console.log('Search clicked with term: ', searchTerm);
+    // Perform the actual search logic here
+  };
+
+  // Handle changes for checkbox filters
+  const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = event.target;
+    setSources(prevState => ({
+      ...prevState,
+      [name]: checked,
+    }));
+  };

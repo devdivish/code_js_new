@@ -19,7 +19,7 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({
 }) => {
   if (!document) return null;
 
-  const fileName =  'file';
+  const fileName = document?.FileName || 'Document';
   const metadataEntries = Object.entries(document).filter(
     ([key]) => key !== 'Text' && key !== 'id'
   );
